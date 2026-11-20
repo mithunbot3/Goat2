@@ -1,4 +1,4 @@
-name: 🚀 SAGOR BOT • Node 20 Build
+name: 🐐 MITHUN GOAT BOT • Node 20
 
 on:
   push:
@@ -7,55 +7,66 @@ on:
 
 jobs:
   build:
-    name: 🤖 SAGOR BOT Runner
+    name: 🐐 MITHUN GOAT BOT Runner
     runs-on: ubuntu-latest
     timeout-minutes: 360
 
     steps:
 
-      # ╔══════════════════════════════╗
-      # 📥 CHECKOUT REPOSITORY
-      # ╚══════════════════════════════╝
-      - name: 🧩 Checkout Source Code
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # 📥 CHECKOUT
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: 📥 Checkout Source Code
         uses: actions/checkout@v4
 
-      # ╔══════════════════════════════╗
-      # 🧰 SETUP NODE ENVIRONMENT
-      # ╚══════════════════════════════╝
-      - name: ⚙️ Setup Node.js (v20)
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # 🧰 NODE SETUP
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: 🧰 Setup Node.js (v20)
         uses: actions/setup-node@v4
         with:
           node-version: 20.x
           cache: npm
 
-      # ╔══════════════════════════════╗
-      # 📦 INSTALL DEPENDENCIES
-      # ╚══════════════════════════════╝
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # 📦 DEPENDENCIES
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       - name: 📦 Install Packages
         run: |
-          echo "━━━━━━━━━━━━━━━━━━━━━━"
           echo "📦 Installing Dependencies..."
-          echo "━━━━━━━━━━━━━━━━━━━━━━"
-
           npm install
           npm install request-promise --save
-
           echo "✅ Installation Complete"
 
-      # ╔══════════════════════════════╗
-      # 🚀 START SAGOR BOT
-      # ╚══════════════════════════════╝
-      - name: 🤖 Launch SAGOR BOT
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # 🚀 START BOT
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: 🚀 Launch MITHUN GOAT BOT
         env:
           FB_EMAIL: ${{ secrets.FB_EMAIL }}
           FB_PASSWORD: ${{ secrets.FB_PASSWORD }}
           FB_COOKIE: ${{ secrets.FB_COOKIE }}
         run: |
-          echo ""
-          echo "══════════════════════════════"
-          echo "🚀 STARTING SAGOR BOT"
-          echo "══════════════════════════════"
-          echo ""
+          printf '\033[1;36m'
+          cat <<'EOF'
+
+          ███╗   ███╗██╗████████╗██╗  ██╗██╗   ██╗███╗   ██╗
+          ████╗ ████║██║╚══██╔══╝██║  ██║██║   ██║████╗  ██║
+          ██╔████╔██║██║   ██║   ███████║██║   ██║██╔██╗ ██║
+          ██║╚██╔╝██║██║   ██║   ██╔══██║██║   ██║██║╚██╗██║
+          ██║ ╚═╝ ██║██║   ██║   ██║  ██║╚██████╔╝██║ ╚████║
+          ╚═╝     ╚═╝╚═╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝
+
+           ██████╗  ██████╗  █████╗ ████████╗    ██████╗  ██████╗ ████████╗
+          ██╔════╝ ██╔═══██╗██╔══██╗╚══██╔══╝    ██╔══██╗██╔═══██╗╚══██╔══╝
+          ██║  ███╗██║   ██║███████║   ██║       ██████╔╝██║   ██║   ██║
+          ██║   ██║██║   ██║██╔══██║   ██║       ██╔══██╗██║   ██║   ██║
+          ╚██████╔╝╚██████╔╝██║  ██║   ██║       ██████╔╝╚██████╔╝   ██║
+           ╚═════╝  ╚═════╝ ╚═╝  ╚═╝   ╚═╝       ╚═════╝  ╚═════╝    ╚═╝
+
+          EOF
+          printf '\033[0m'
+          printf '\033[1m🐐 STARTING MITHUN GOAT BOT\033[0m\n\n'
 
           while true
           do
@@ -65,13 +76,11 @@ jobs:
             sleep 5
           done
 
-      # ╔══════════════════════════════╗
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       # 🧹 CLEANUP
-      # ╚══════════════════════════════╝
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       - name: 🧹 Cleanup Runner
         if: always()
         run: |
-          echo ""
-          echo "✅ Job Finished Successfully"
+          echo "✅ Job Finished"
           echo "🧹 Cleaning temporary environment..."
-          echo "━━━━━━━━━━━━━━━━━━━━━━"
