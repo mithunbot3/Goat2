@@ -10,10 +10,9 @@ const LANGS = {
   pt: "Portuguese", tr: "Turkish", th: "Thai", "zh-CN": "Chinese"
 };
 
-const MAX_CHARS = 1000;  // সর্বোচ্চ কত অক্ষর বলবে
-const CHUNK = 190;       // Google TTS এক রিকোয়েস্টে ~200 অক্ষর নেয়
+const MAX_CHARS = 1000;
+const CHUNK = 190;
 
-// লেখার স্ক্রিপ্ট দেখে ভাষা আন্দাজ (ভাষা না দিলে)
 function detectLang(text) {
   if (/[\u0980-\u09FF]/.test(text)) return "bn";
   if (/[\u3040-\u30FF]/.test(text)) return "ja";
@@ -26,7 +25,6 @@ function detectLang(text) {
   return "en";
 }
 
-// বড় লেখা শব্দের সীমানায় ভাগ করা
 function splitText(text) {
   const parts = [];
   let cur = "";
@@ -57,97 +55,90 @@ async function fetchTTS(text, lang) {
   return Buffer.from(res.data);
 }
 
-module.exports.config = {
-  name: "say",
-  version: "2.0",
-  hasPermssion: 0,
-  credits: "Mithun",
-  description: "Text to speech (auto language detect, long text support)",
-  commandCategory: "fun",
-  usages: "say [lang] <text>\nsay bn আমি তোমাকে ভালোবাসি\nsay ja こんにちは\nreply করে: say  /  say bn\nভাষার লিস্ট: say list",
-  cooldowns: 5
-};
+module.exports = {
+  config: {
+    name: "say",
+    version: "3.0",
+    author: "Mithun",
+    countDown: 5,
+    role: 0,
+    description: { en: "Text to speech (auto language detect, long text support)" },
+    category: "fun",
+    guide: {
+      en: "{pn} [lang] <text>\n{pn} bn আমি ভালো আছি\n{pn} ja こんにちは\nরিপ্লাই করে: {pn} / {pn} bn\nভাষার লিস্ট: {pn} list"
+    }
+  },
 
-module.exports.run = async function ({ api, event, args }) {
-  const { threadID, senderID, messageID, type, messageReply } = event;
-  const filePath = resolve(__dirname, "cache", `say_${threadID}_${senderID}_${Date.now()}.mp3`);
-  const cleanup = () => { try { unlinkSync(filePath); } catch (e) {} };
+  onStart: async function ({ api, event, args, message }) {
+    const { threadID, senderID, messageID, type, messageReply } = event;
+    const filePath = resolve(__dirname, "cache", `say_${threadID}_${senderID}_${Date.now()}.mp3`);
+    const cleanup = () => { try { unlinkSync(filePath); } catch (e) {} };
 
-  try {
-    // ---------- ভাষার লিস্ট ----------
-    if (args[0]?.toLowerCase() === "list") {
-      const list = Object.entries(LANGS)
-        .filter(([k]) => k !== "in")
-        .map(([k, v]) => `• ${k} → ${v}`)
-        .join("\n");
-      return api.sendMessage(
-        `🗣️ SAY LANGUAGES\n━━━━━━━━━━━\n${list}\n━━━━━━━━━━━\nউদাহরণ: say bn আমি ভালো আছি\nভাষা না দিলে নিজে থেকেই ধরে নেবে।`,
-        threadID, messageID
+    try {
+      if (args[0]?.toLowerCase() === "list") {
+        const list = Object.entries(LANGS)
+          .filter(([k]) => k !== "in")
+          .map(([k, v]) => `• ${k} → ${v}`)
+          .join("\n");
+        return message.reply(
+          `🗣️ SAY LANGUAGES\n━━━━━━━━━━━\n${list}\n━━━━━━━━━━━\nউদাহরণ: say bn আমি ভালো আছি\nভাষা না দিলে নিজে থেকেই ধরে নেবে।`
+        );
+      }
+
+      const normalize = (s) => (s.toLowerCase() === "zh-cn" ? "zh-CN" : s.toLowerCase());
+      const isReply = type === "message_reply" && messageReply?.body;
+      const first = args[0];
+      const firstIsLang = first && Object.prototype.hasOwnProperty.call(LANGS, normalize(first));
+
+      let lang = null;
+      let text;
+
+      if (isReply) {
+        if (firstIsLang) lang = normalize(first);
+        text = messageReply.body;
+      } else if (firstIsLang && args.length > 1) {
+        lang = normalize(first);
+        text = args.slice(1).join(" ");
+      } else {
+        text = args.join(" ");
+      }
+
+      text = (text || "").replace(/\s+/g, " ").trim();
+
+      if (!text) {
+        return message.reply("❌ কিছু লিখে দাও বলার জন্য।\nউদাহরণ: say bn আমি ভালো আছি\nভাষার লিস্ট: say list");
+      }
+
+      if (!lang) lang = detectLang(text);
+      if (lang === "in") lang = "id";
+
+      let note = "";
+      if (text.length > MAX_CHARS) {
+        text = text.slice(0, MAX_CHARS);
+        note = `⚠️ লেখা বড় হওয়ায় প্রথম ${MAX_CHARS} অক্ষর বলা হলো।`;
+      }
+
+      api.setMessageReaction("⏳", messageID, () => {}, true);
+
+      const buffers = [];
+      for (const c of splitText(text)) buffers.push(await fetchTTS(c, lang));
+
+      ensureDirSync(resolve(__dirname, "cache"));
+      writeFileSync(filePath, Buffer.concat(buffers));
+
+      return message.reply(
+        { body: note || undefined, attachment: createReadStream(filePath) },
+        (err) => {
+          if (err) console.error("say.js send error:", err);
+          api.setMessageReaction(err ? "❌" : "✅", messageID, () => {}, true);
+          cleanup();
+        }
       );
+    } catch (error) {
+      console.error("Error occurred during TTS:", error.message);
+      cleanup();
+      api.setMessageReaction("❌", messageID, () => {}, true);
+      return message.reply("⚠️ TTS বানাতে সমস্যা হয়েছে, আবার চেষ্টা করো।");
     }
-
-    // ---------- ভাষা ও টেক্সট আলাদা করা ----------
-    const isReply = type === "message_reply" && messageReply?.body;
-    let lang = null;
-    let text;
-
-    const first = args[0];
-    const firstIsLang = first && Object.prototype.hasOwnProperty.call(LANGS, first.toLowerCase() === "zh-cn" ? "zh-CN" : first.toLowerCase());
-
-    if (isReply) {
-      // রিপ্লাই করলে: say / say bn
-      if (firstIsLang) lang = first.toLowerCase() === "zh-cn" ? "zh-CN" : first.toLowerCase();
-      text = messageReply.body;
-    } else if (firstIsLang && args.length > 1) {
-      // শব্দ না কেটে শুধু পুরো আলাদা ভাষা-কোড থাকলেই ভাষা ধরবে
-      lang = first.toLowerCase() === "zh-cn" ? "zh-CN" : first.toLowerCase();
-      text = args.slice(1).join(" ");
-    } else {
-      text = args.join(" ");
-    }
-
-    text = (text || "").replace(/\s+/g, " ").trim();
-
-    if (!text) {
-      return api.sendMessage(
-        "❌ কিছু লিখে দাও বলার জন্য।\nউদাহরণ: say bn আমি ভালো আছি\nভাষার লিস্ট: say list",
-        threadID, messageID
-      );
-    }
-
-    if (!lang) lang = detectLang(text);
-    if (lang === "in") lang = "id";
-
-    let note = "";
-    if (text.length > MAX_CHARS) {
-      text = text.slice(0, MAX_CHARS);
-      note = `⚠️ লেখা বড় হওয়ায় প্রথম ${MAX_CHARS} অক্ষর বলা হলো।`;
-    }
-
-    // ---------- অডিও তৈরি ----------
-    api.setMessageReaction("⏳", messageID, () => {}, true);
-
-    const chunks = splitText(text);
-    const buffers = [];
-    for (const c of chunks) buffers.push(await fetchTTS(c, lang));
-
-    ensureDirSync(resolve(__dirname, "cache"));
-    writeFileSync(filePath, Buffer.concat(buffers));
-
-    return api.sendMessage(
-      { body: note || undefined, attachment: createReadStream(filePath) },
-      threadID,
-      (err) => {
-        if (err) console.error("say.js send error:", err);
-        api.setMessageReaction(err ? "❌" : "✅", messageID, () => {}, true);
-        cleanup();
-      },
-      messageID
-    );
-  } catch (error) {
-    console.error("Error occurred during TTS:", error.message);
-    cleanup();
-    api.setMessageReaction("❌", messageID, () => {}, true);
-    return api.sendMessage("⚠️ TTS বানাতে সমস্যা হয়েছে, আবার চেষ্টা করো।", threadID, messageID);
   }
 };
