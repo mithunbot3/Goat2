@@ -1,8 +1,16 @@
-const { getPrefix } = global.utils;
+const { getPrefix, getStreamFromURL } = global.utils;
 const { commands } = global.GoatBot;
 
+const BOT_NAME = "Mithun goat bot";
 const header = "╔═━「 𝐇𝐄𝐋𝐏 𝐌𝐄𝐍𝐔 」━═╗";
 const footer = "╚═━──────────────━═╝";
+const credit = `🐐 ${BOT_NAME}`;
+
+// 🖼️ এখানে তোমার ছবির লিংক বসাও (direct image link)
+const IMAGES = [
+  "https://i.imgur.com/XXXXXXX.jpg",
+  "https://i.imgur.com/YYYYYYY.jpg"
+];
 
 function getRole(cmd) {
   return Number(cmd.config?.role) || 0;
@@ -19,6 +27,17 @@ function findCommand(name) {
   return commands.get(name) || commands.get(global.GoatBot.aliases.get(name));
 }
 
+// 🖼️ পিক সহ রিপ্লাই পাঠানোর ফাংশন
+async function sendWithPic(message, body) {
+  try {
+    const url = IMAGES[Math.floor(Math.random() * IMAGES.length)];
+    const stream = await getStreamFromURL(url);
+    return await message.reply({ body, attachment: stream });
+  } catch (e) {
+    return message.reply(body); // ছবি না এলে শুধু টেক্সট
+  }
+}
+
 function detailsMessage(cmd, prefix) {
   const info = cmd.config;
   const guide = pickText(info.guide) || "No usage info.";
@@ -31,14 +50,15 @@ function detailsMessage(cmd, prefix) {
     `┃ ✦ Usage: ${guide.replace(/{p}/g, prefix).replace(/{pn}/g, prefix + info.name).replace(/{n}/g, info.name)}\n` +
     `┃ ✦ Role: ${getRole(cmd)}\n` +
     `┃ ✦ Category: ${info.category || "Uncategorized"}\n` +
-    `${footer}`
+    `${footer}\n` +
+    `${credit}`
   );
 }
 
 module.exports = {
   config: {
     name: "help",
-    version: "3.6",
+    version: "3.7",
     author: "Mithun",
     usePrefix: true,
     role: 0,
@@ -69,14 +89,17 @@ module.exports = {
         )
         .join("\n");
 
-      return message.reply(
+      return sendWithPic(
+        message,
         `${header}\n` +
+        `┃ 🤖 Bot: ${BOT_NAME}\n` +
         `┃ 🔑 Prefix: ${prefix}\n` +
         `┃ 📂 Total Commands: ${visible.length}\n` +
         `${body}\n` +
         `${footer}\n\n` +
         `📌 ${prefix}help -<category> → filter by category\n` +
-        `📌 ${prefix}help <command> → command info`
+        `📌 ${prefix}help <command> → command info\n\n` +
+        `${credit}`
       );
     }
 
@@ -87,7 +110,7 @@ module.exports = {
       const cmd = findCommand(args[1].toLowerCase());
       if (!cmd || getRole(cmd) > role)
         return message.reply(`✘ Command "${args[1]}" not found or access denied.`);
-      return message.reply(detailsMessage(cmd, prefix));
+      return sendWithPic(message, detailsMessage(cmd, prefix));
     }
 
     // ---------- help -<category> ----------
@@ -100,11 +123,13 @@ module.exports = {
       if (matched.length === 0)
         return message.reply(`✘ No commands found under "${category}".`);
 
-      return message.reply(
+      return sendWithPic(
+        message,
         `╔═━「 𝐂𝐀𝐓𝐄𝐆𝐎𝐑𝐘: ${category.toUpperCase()} 」━═╗\n` +
         `${matched.join("\n")}\n` +
         `${footer}\n\n` +
-        `📌 Try: ${prefix}help <command> to view details`
+        `📌 Try: ${prefix}help <command> to view details\n\n` +
+        `${credit}`
       );
     }
 
@@ -113,6 +138,6 @@ module.exports = {
     if (!cmd || getRole(cmd) > role)
       return message.reply(`✘ Command "${arg}" not found.`);
 
-    return message.reply(detailsMessage(cmd, prefix));
+    return sendWithPic(message, detailsMessage(cmd, prefix));
   }
 };
