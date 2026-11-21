@@ -1,38 +1,25 @@
-const request = require("request");
-const fs = require("fs-extra");
-const path = require("path");
+const { getStreamFromURL } = global.utils;
 
-module.exports.config = {
-  name: "owner",
-  version: "2.1.0",
-  hasPermssion: 0,
-  credits: "mithun",
-  description: "Show owner photo",
-  commandCategory: "Information",
-  usages: "owner",
-  cooldowns: 2
-};
+const IMG = "https://i.imgur.com/p64G39M.jpeg";
 
-module.exports.run = async function ({ api, event }) {
-  const { threadID, messageID } = event;
+module.exports = {
+  config: {
+    name: "owner",
+    version: "3.0",
+    author: "mithun",
+    countDown: 2,
+    role: 0,
+    description: { en: "Show owner photo" },
+    category: "info",
+    guide: { en: "{pn}" }
+  },
 
-  const img = "https://i.imgur.com/p64G39M.jpeg";
-
-  const cacheDir = path.join(__dirname, "cache");
-  const filePath = path.join(cacheDir, `owner_${Date.now()}.jpg`);
-  fs.ensureDirSync(cacheDir);
-
-  const cleanup = () => { try { fs.unlinkSync(filePath); } catch (e) {} };
-
-  request(encodeURI(img))
-    .on("error", cleanup)
-    .pipe(fs.createWriteStream(filePath))
-    .on("close", () => {
-      api.sendMessage(
-        { attachment: fs.createReadStream(filePath) },
-        threadID,
-        cleanup,
-        messageID
-      );
-    });
+  onStart: async function ({ message }) {
+    try {
+      const stream = await getStreamFromURL(IMG);
+      return message.reply({ attachment: stream });
+    } catch (e) {
+      console.error("owner error:", e.message);
+    }
+  }
 };
